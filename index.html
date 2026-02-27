@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>每日任务 - 极简任务管理</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2196F3">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="每日任务">
+</head>
+<body>
+  <div id="app">
+    <!-- 主页 - 今日任务 -->
+    <div class="screen active" id="screen-today">
+      <header class="header">
+        <div class="header-title">
+          <h1>今日任务</h1>
+          <p id="current-date"></p>
+        </div>
+        <div class="completion-rate">
+          <span class="rate-icon">✓</span>
+          <span id="today-rate">0%</span>
+        </div>
+      </header>
+
+      <main class="content">
+        <div id="task-list-today" class="task-list"></div>
+        
+        <!-- 空状态 -->
+        <div id="empty-state" class="empty-state" style="display: none;">
+          <div class="empty-icon">🎉</div>
+          <h2>太棒了！今日任务已全部完成</h2>
+          <p>点击下方按钮添加新任务</p>
+        </div>
+
+        <!-- 番茄钟入口 -->
+        <div class="pomodoro-card" onclick="showPomodoroModal()">
+          <div class="pomodoro-icon">🍅</div>
+          <div class="pomodoro-info">
+            <h3>番茄钟专注</h3>
+            <p>25 分钟专注 + 5 分钟休息</p>
+          </div>
+          <span class="chevron">›</span>
+        </div>
+      </main>
+
+      <button class="fab" onclick="showAddTaskModal()">
+        <span>+</span>
+      </button>
+    </div>
+
+    <!-- 任务清单页面 -->
+    <div class="screen" id="screen-tasks">
+      <header class="header">
+        <h1>任务清单</h1>
+        <select id="task-filter" onchange="renderTasks()">
+          <option value="all">全部</option>
+          <option value="incomplete">未完成</option>
+          <option value="completed">已完成</option>
+        </select>
+      </header>
+      <main class="content">
+        <!-- 快捷按钮 -->
+        <div class="quick-actions">
+          <button class="action-btn" onclick="completeAllToday()">
+            <span>✅</span> 完成今日任务
+          </button>
+          <button class="action-btn" onclick="showCompletedTasks()">
+            <span>📋</span> 查看已完成
+          </button>
+          <button class="action-btn danger" onclick="clearCompleted()">
+            <span>🗑️</span> 清除已完成
+          </button>
+        </div>
+        <div id="task-list-all" class="task-list"></div>
+      </main>
+      <button class="fab fab-center" onclick="showAddTaskModal()">
+        <span>+</span>
+      </button>
+    </div>
+
+    <!-- 统计页面 -->
+    <div class="screen" id="screen-stats">
+      <header class="header">
+        <h1>统计</h1>
+      </header>
+      <main class="content">
+        <div class="stats-container">
+          <div class="stat-card">
+            <div class="circular-progress" data-percent="0" id="today-progress">
+              <svg viewBox="0 0 36 36">
+                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#eee" stroke-width="2"/>
+                <path class="progress-ring" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#4CAF50" stroke-width="2" stroke-dasharray="0, 100"/>
+              </svg>
+              <span class="progress-text" id="today-progress-text">0%</span>
+            </div>
+            <h3>今日完成率</h3>
+            <p id="today-progress-subtitle">0/0 任务已完成</p>
+          </div>
+
+          <div class="stat-card">
+            <div class="circular-progress" data-percent="0" id="week-progress">
+              <svg viewBox="0 0 36 36">
+                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#eee" stroke-width="2"/>
+                <path class="progress-ring" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#2196F3" stroke-width="2" stroke-dasharray="0, 100"/>
+              </svg>
+              <span class="progress-text" id="week-progress-text">0%</span>
+            </div>
+            <h3>本周完成率</h3>
+            <p id="week-progress-subtitle">0/0 任务已完成</p>
+          </div>
+
+          <div class="stat-card wide">
+            <h3>总体统计</h3>
+            <div class="stats-grid">
+              <div class="stat-item">
+                <span class="stat-value" id="total-tasks">0</span>
+                <span class="stat-label">总任务</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value" id="completed-tasks">0</span>
+                <span class="stat-label">已完成</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value" id="completion-rate">0%</span>
+                <span class="stat-label">完成率</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="stat-card wide">
+            <h3>任务分类</h3>
+            <div class="category-stats" id="category-stats"></div>
+          </div>
+
+          <!-- 条形图 -->
+          <div class="stat-card wide">
+            <h3>本周任务趋势</h3>
+            <div class="bar-chart" id="week-bar-chart"></div>
+          </div>
+
+          <!-- 折线图 -->
+          <div class="stat-card wide">
+            <h3>完成率趋势</h3>
+            <div class="line-chart" id="completion-line-chart"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- 我的页面 -->
+    <div class="screen" id="screen-profile">
+      <header class="header">
+        <h1>我的</h1>
+      </header>
+      <main class="content">
+        <div class="profile-card">
+          <div class="profile-avatar">👤</div>
+          <div class="profile-info">
+            <h3>每日任务用户</h3>
+            <p>已创建 <span id="profile-task-count">0</span> 个任务</p>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>设置</h3>
+          <div class="setting-item">
+            <div class="setting-info">
+              <span class="setting-icon">🔔</span>
+              <div>
+                <h4>通知提醒</h4>
+                <p>任务到期时发送通知</p>
+              </div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-notifications" checked onchange="saveSettings()">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <span class="setting-icon">🌙</span>
+              <div>
+                <h4>深色模式</h4>
+                <p>使用深色主题</p>
+              </div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-darkmode" onchange="toggleDarkMode()">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <span class="setting-icon">☀️</span>
+              <div>
+                <h4>早 8 点提醒</h4>
+                <p>每天早上 8 点推送今日待办</p>
+              </div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-morning" checked onchange="saveSettings()">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>数据管理</h3>
+          <div class="setting-item action" onclick="exportData()">
+            <div class="setting-info">
+              <span class="setting-icon">💾</span>
+              <div>
+                <h4>导出数据</h4>
+                <p>备份所有任务数据</p>
+              </div>
+            </div>
+            <span class="chevron">›</span>
+          </div>
+          <div class="setting-item action" onclick="importData()">
+            <div class="setting-info">
+              <span class="setting-icon">📥</span>
+              <div>
+                <h4>导入数据</h4>
+                <p>从备份恢复</p>
+              </div>
+            </div>
+            <span class="chevron">›</span>
+          </div>
+          <div class="setting-item action danger" onclick="clearAllData()">
+            <div class="setting-info">
+              <span class="setting-icon">🗑️</span>
+              <div>
+                <h4>清除所有数据</h4>
+                <p>删除所有任务和设置</p>
+              </div>
+            </div>
+            <span class="chevron">›</span>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>关于</h3>
+          <div class="setting-item">
+            <div class="setting-info">
+              <span class="setting-icon">ℹ️</span>
+              <div>
+                <h4>版本</h4>
+                <p>1.0.0 (Web Demo)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- 底部导航 -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" onclick="switchTab('today')">
+        <span class="nav-icon">📅</span>
+        <span class="nav-label">今日</span>
+      </button>
+      <button class="nav-item" onclick="switchTab('tasks')">
+        <span class="nav-icon">📝</span>
+        <span class="nav-label">任务</span>
+      </button>
+      <button class="nav-item" onclick="switchTab('stats')">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">统计</span>
+      </button>
+      <button class="nav-item" onclick="switchTab('profile')">
+        <span class="nav-icon">👤</span>
+        <span class="nav-label">我的</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- 添加任务弹窗 -->
+  <div class="modal" id="add-task-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>添加任务</h2>
+        <button class="modal-close" onclick="closeModal('add-task-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>任务标题 *</label>
+          <div class="input-with-voice">
+            <input type="text" id="task-title" placeholder="输入任务内容或点击🎤语音输入" required>
+            <button class="voice-btn" id="voice-btn" onclick="toggleVoiceInput()" title="语音输入">
+              🎤
+            </button>
+          </div>
+          <p class="voice-status" id="voice-status"></p>
+        </div>
+        <div class="form-group">
+          <label>描述（可选）</label>
+          <textarea id="task-description" placeholder="添加更多细节" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+          <label>优先级</label>
+          <div class="segmented-control" data-type="priority">
+            <button class="segment-btn" data-value="urgent" onclick="selectPriority(this)">
+              <span class="emoji">🔴</span>
+              <span>紧急</span>
+            </button>
+            <button class="segment-btn" data-value="important" onclick="selectPriority(this)">
+              <span class="emoji">🟠</span>
+              <span>重要</span>
+            </button>
+            <button class="segment-btn active" data-value="normal" onclick="selectPriority(this)">
+              <span class="emoji">🔵</span>
+              <span>一般</span>
+            </button>
+            <button class="segment-btn" data-value="routine" onclick="selectPriority(this)">
+              <span class="emoji">🟢</span>
+              <span>日常</span>
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>时间段</label>
+          <div class="segmented-control" data-type="time">
+            <button class="segment-btn" data-value="morning" onclick="selectTimeSlot(this)">
+              <span class="emoji">☀️</span>
+              <span>早上</span>
+            </button>
+            <button class="segment-btn" data-value="noon" onclick="selectTimeSlot(this)">
+              <span class="emoji">🌤️</span>
+              <span>中午</span>
+            </button>
+            <button class="segment-btn" data-value="evening" onclick="selectTimeSlot(this)">
+              <span class="emoji">🌅</span>
+              <span>晚上</span>
+            </button>
+            <button class="segment-btn" data-value="bedtime" onclick="selectTimeSlot(this)">
+              <span class="emoji">🌙</span>
+              <span>睡前</span>
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>分类</label>
+          <select id="task-category">
+            <option value="work">💼 工作</option>
+            <option value="study">📚 学习</option>
+            <option value="life">🏠 生活</option>
+            <option value="fitness">💪 健身</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="task-recurring" onchange="toggleRecurringOptions()">
+            重复任务
+          </label>
+        </div>
+        <div class="form-group" id="recurring-type-group" style="display: none;">
+          <select id="task-recurring-type">
+            <option value="daily">每天</option>
+            <option value="weekly">每周</option>
+            <option value="weekdays">工作日</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-text" onclick="closeModal('add-task-modal')">取消</button>
+        <button class="btn-primary" onclick="addTask()">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 番茄钟弹窗 -->
+  <div class="modal" id="pomodoro-modal">
+    <div class="modal-content pomodoro-content">
+      <div class="modal-header">
+        <h2 id="pomodoro-title">🍅 专注时间</h2>
+        <button class="modal-close" onclick="closeModal('pomodoro-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="timer-display">
+          <div class="timer-ring">
+            <svg viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="45" fill="none" stroke="#eee" stroke-width="4"/>
+              <circle id="timer-progress" cx="50" cy="50" r="45" fill="none" stroke="#FF5722" stroke-width="4" 
+                stroke-dasharray="283" stroke-dashoffset="0" transform="rotate(-90 50 50)"/>
+            </svg>
+            <div class="timer-time" id="timer-time">25:00</div>
+          </div>
+          <p class="timer-status" id="timer-status">专注中</p>
+        </div>
+        <div class="timer-controls">
+          <button class="btn-icon" onclick="resetTimer()">
+            <span>🔄</span>
+          </button>
+          <button class="btn-primary btn-large" id="timer-toggle" onclick="toggleTimer()">
+            <span id="timer-toggle-icon">▶</span>
+          </button>
+          <button class="btn-icon" onclick="skipTimer()">
+            <span>⏭</span>
+          </button>
+        </div>
+        <p class="pomodoro-count">已完成 <span id="pomodoro-count">0</span> 个番茄钟</p>
+        <p class="pomodoro-tip" id="pomodoro-tip">💡 专注期间请关闭手机通知，保持专注！</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
